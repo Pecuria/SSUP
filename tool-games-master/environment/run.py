@@ -56,26 +56,26 @@ def prior_test():
     
 def main():
     num = np.zeros(21)
-    act_array = []
-    policy_array = []
-    prior = 0
-    policy = 0
-    first_action = []
-    last_action = []
+    act_array = [] #表示act数量的list
+    policy_array = [] #表示 policy 解决问题的 act 数量的list
+    prior = 0 #prior解决问题的次数
+    policy = 0 #policy解决问题的次数
+    first_action = [] #第一次 act 的 list
+    last_action = [] #最后一次 act 的 list
     time = len(act_array)
     
     while time < 100:
         time += 1
+        #read file
         dir = "Trials/Original"
-        name = "/Catapult"
+        name = "/Catapult" #这里修改关卡名
         task_dir = dir + name
         with open(task_dir + ".json", 'r') as f:
             btr = json.load(f)
         pgw = loadFromDict(btr["world"])
         tp = ToolPicker(btr)
-        demonstrateWorld(pgw, hz = 9999999999., action = last_action,draw=True)
-        exit(0)
         
+        #initialize
         objects = pgw.getDynamicObjects()
         objects = verifyDynamicObjects(objects, btr)
         tools = tp._tools
@@ -89,6 +89,7 @@ def main():
         print(time,"%")
         model = SSUP(objects = objects, tools = tools, goal = goal, task_type = task_type, goal_name = goal_name, tp = tp, obj_in_goal_name = obj_in_goal_name, epsilon = 0.3)
         
+        #merge result
         act_time, action_type = model.run()
         first_action.append(model.first)
         last_action.append(model.last)
@@ -99,6 +100,7 @@ def main():
         elif action_type == 'policy':
             policy += 1
             policy_array.append(act_time)
+        #因为 environment 的 simulate 有 bug 会爆掉，所以需要输出中间数据
         print(act_array)
         print(policy_array)
         print(prior, policy)
@@ -106,6 +108,7 @@ def main():
         print()
         print(last_action)
         if time == 100:
+            #visualize
             demonstrateWorld(pgw, hz = 9999999999., action = first_action, draw = True)
             demonstrateWorld(pgw, hz = 9999999999., action = last_action, draw = True)
             exit(0)

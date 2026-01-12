@@ -73,7 +73,7 @@ class SSUP:
         ])
         self.action_array = []
     
-    def get_bounding_box(self, vertices):
+    def get_bounding_box(self, vertices): #获得物体的 bounding_box
         verts = np.array(vertices)
         #print(vertices)
         #print(verts)
@@ -83,7 +83,7 @@ class SSUP:
         y_min, y_max = np.min(verts[:,:,1]), np.max(verts[:,:,1])
         return x_min, y_min, x_max, y_max
     
-    def oriented_prior(self, tool_name):
+    def oriented_prior(self, tool_name): #prior sample
         tool_bb = self.get_bounding_box(self.tools[tool_name])
         tool_h = tool_bb[3] - tool_bb[1]
         obj_idx = np.random.choice(np.arange(len(self.objects)), p=np.ones(len(self.objects))/len(self.objects))
@@ -139,7 +139,7 @@ class SSUP:
         
         return [pos_x, pos_y]
     
-    def initialize(self):
+    def initialize(self): #初始化
         #print(2)
         for idx, tool_name in enumerate(self.tools.keys()):
             #print(self.n_init)
@@ -152,7 +152,7 @@ class SSUP:
                 self.update(self.get_log(tool_name, pos), reward, idx)
                 
     
-    def simulate(self, tool_name, pos):
+    def simulate(self, tool_name, pos): #noisy simulate
         reward = 0
         if self.tp.checkPlacementCollide(tool_name, pos):
             return -100
@@ -172,7 +172,7 @@ class SSUP:
                 reward += self.get_reward(path_dict)
         return 1.0 *  reward / self.n_sims
     
-    def sample_prior(self):
+    def sample_prior(self): #从 prior sample 一个 action
         print("prior")
         #tool_dist = D.Categorical(logits = self.tool_logits)
         #tool = tool_dist.sample()
@@ -183,7 +183,7 @@ class SSUP:
         pos = self.oriented_prior(tool_name)
         return tool, pos, "prior"
         
-    def sample_policy(self):
+    def sample_policy(self): # 从 policy sample 一个 action
         print("policy")
         tool_dist = D.Categorical(logits = self.tool_logits)
         tool = tool_dist.sample()
@@ -206,7 +206,7 @@ class SSUP:
         else:
             return self.sample_policy()
         
-    def get_min_dis(self, path_dict):
+    def get_min_dis(self, path_dict): #求出路径到终点的最短距离
         min_dis = 1200
         for obj in self.oign:
             tra = np.array(path_dict[obj])
@@ -302,7 +302,7 @@ class SSUP:
                 best_pos = pos
                 best_type = action_type
             it += 1
-            if reward > self.T:
+            if reward > self.T: # reward 超过阈值 T
                 acting = True
                 #print(tool_name, pos, reward, "better")
                 idx = self.name_to_idx[tool_name]
@@ -311,7 +311,7 @@ class SSUP:
                     self.first = (idx, pos, self.scale[idx].detach().tolist())
                 self.last = (idx, pos, self.scale[idx].detach().tolist())
                 self.action_array.append([tool_name, pos])
-            elif it >= self.n_iter:
+            elif it >= self.n_iter: #达到最大 sample 次数
                 acting = True
                 #print(best_toolname, best_pos, "best")
                 tool_name, pos, action_type = best_toolname, best_pos, best_type
