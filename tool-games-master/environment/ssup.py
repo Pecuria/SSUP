@@ -22,7 +22,7 @@ class SSUP:
         std_y = 200,
         std_x = 10,
         n_sims = 4,
-        n_init = 50,
+        n_init = 5,
         epsilon = 0.3,
         dir_std = 0.1,
         ela_std = 0.1,
@@ -58,6 +58,8 @@ class SSUP:
         self.check_mode = check_mode
         self.n_iter = n_iter
         self.eps = 1e-5
+        self.first = None
+        self.last = None
         self.idx_to_name = {i : tool for i, tool in enumerate(self.tools.keys())}
         self.name_to_idx = {tool : i for i, tool in enumerate(self.tools.keys())}
         self.locs = torch.tile(torch.tensor([0.]),(3, 2)).requires_grad_(True)
@@ -156,6 +158,7 @@ class SSUP:
             return -100
         #print(tool_name, pos, self.dir_std, self.ela_std)
         for _ in range(self.n_sims):
+            #print(tool_name, pos)
             path_dict, success, _ = self.tp.runNoisyPath(
                 toolname = tool_name,
                 position = pos,
@@ -170,7 +173,7 @@ class SSUP:
         return 1.0 *  reward / self.n_sims
     
     def sample_prior(self):
-        #print("prior")
+        print("prior")
         #tool_dist = D.Categorical(logits = self.tool_logits)
         #tool = tool_dist.sample()
         toollist = list(self.tools.keys())
@@ -181,7 +184,7 @@ class SSUP:
         return tool, pos, "prior"
         
     def sample_policy(self):
-        #print("policy")
+        print("policy")
         tool_dist = D.Categorical(logits = self.tool_logits)
         tool = tool_dist.sample()
         collide = True
@@ -302,13 +305,21 @@ class SSUP:
             if reward > self.T:
                 acting = True
                 #print(tool_name, pos, reward, "better")
+                idx = self.name_to_idx[tool_name]
                 path_dict , success, _ = self.tp.observePlacementPath(tool_name, pos, self.maxtime)
+                if self.first == None:
+                    self.first = (idx, pos, self.scale[idx].detach().tolist())
+                self.last = (idx, pos, self.scale[idx].detach().tolist())
                 self.action_array.append([tool_name, pos])
             elif it >= self.n_iter:
                 acting = True
                 #print(best_toolname, best_pos, "best")
                 tool_name, pos, action_type = best_toolname, best_pos, best_type
+                idx = self.name_to_idx[tool_name]
                 path_dict, success, _ = self.tp.observePlacementPath(tool_name, pos, self.maxtime)
+                if self.first == None:
+                    self.first = (idx, pos, self.scale[idx].detach().tolist())
+                self.last = (idx, pos, self.scale[idx].detach().tolist())
                 self.action_array.append([best_toolname,best_pos])
             
             if acting:

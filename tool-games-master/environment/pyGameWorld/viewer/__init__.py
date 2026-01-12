@@ -2,6 +2,7 @@ from __future__ import division, print_function
 import pymunk as pm
 import pygame as pg
 import numpy as np
+import torch
 from scipy.stats import multivariate_normal as mvnm
 from ..world import *
 from ..constants import *
@@ -159,7 +160,27 @@ def drawWorldWithTools(tp, backgroundOnly=False, worlddict=None):
         s.blit(newsc, (630, 137 + 110*i))
     return s
 
-def demonstrateWorld(world, hz = 30.):
+def create_soft_blob(color, radius, max_alpha):
+    surf = pg.Surface((radius * 2, radius * 2), pg.SRCALPHA)
+    
+    steps = 20
+    for i in range(steps):
+        r = int(radius * (1 - i / steps))
+        alpha = int(max_alpha * (i / steps))
+        #print(alpha)
+        pg.draw.circle(surf, (*color, alpha), (radius, radius), r)
+    
+    return surf
+
+COLOR_PINK = (255, 0, 255)   # 工具1
+COLOR_CYAN = (0, 255, 255)   # 工具2
+COLOR_YELLOW = (225, 225, 0) # 工具3
+BLOCK_COLOR = (0, 0, 0)
+GROUND_COLOR = (144, 238, 144) # 浅绿色
+PLATFORM_COLOR = (0, 0, 255)
+RED_BALL_COLOR = (255, 0, 0)
+
+def demonstrateWorld(world, hz = 30., action = [], draw = False):
     pg.init()
     sc = pg.display.set_mode(world.dims)
     clk = pg.time.Clock()
@@ -172,6 +193,25 @@ def demonstrateWorld(world, hz = 30.):
     while running:
         world.step(tps)
         sc.blit(drawWorld(world), (0, 0))
+        if draw == True:
+            for i, act in enumerate(action):
+                idx = act[0]
+                pos = act[1]
+                pos = (pos[0], 600 - pos[1])
+                std = torch.exp(torch.tensor(act[2])).tolist()
+                std = (std[0] * 150, std[1] * 150)
+                #print(idx, pos, std)
+                color = None
+                if idx == 0:
+                    color = COLOR_PINK
+                elif idx == 1:
+                    color = COLOR_YELLOW   # 工具2
+                else:
+                    color = COLOR_CYAN # 工具3
+                blob_surf = create_soft_blob(color = color, radius=30, max_alpha=200)
+                blit_x = pos[0] - blob_surf.get_width() // 2
+                blit_y = pos[1] - blob_surf.get_height() // 2
+                sc.blit(blob_surf, (blit_x, blit_y), special_flags=pg.BLEND_ALPHA_SDL2)  
         pg.display.flip()
         clk.tick(hz)
         for e in pg.event.get():
@@ -179,7 +219,8 @@ def demonstrateWorld(world, hz = 30.):
                 running = False
         if dispFinish and world.checkEnd():
             print("Goal accomplished")
-            dispFinish = False
+            dispFinish = False   
+    
     pg.quit()
 
 def demonstrateTPPlacement(toolpicker, toolname, position, maxtime=20.,
